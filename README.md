@@ -15,7 +15,7 @@ Aplicación web interactiva para el diseño y análisis táctico en hockey. Esta
 
 ## Uso
 
-1. Abre `seminario.html` en tu navegador
+1. Abre `index.html` en tu navegador o visita la URL de GitHub Pages
 2. Ingresa el nombre de tu grupo
 3. Selecciona el momento del juego a trabajar
 4. Completa el análisis táctico
@@ -31,7 +31,11 @@ Aplicación web interactiva para el diseño y análisis táctico en hockey. Esta
 
 ## GitHub Pages
 
-Este proyecto está configurado para funcionar en GitHub Pages. Solo abre `seminario.html` directamente.
+Este proyecto está configurado para funcionar en GitHub Pages. Una vez configurado, la aplicación estará disponible directamente en la URL raíz de tu sitio.
+
+**URL de ejemplo**: `https://TU_USUARIO.github.io/hockey-tactical-lab/`
+
+No necesitas agregar `/index.html` al final, ya que GitHub Pages servirá automáticamente el archivo `index.html` como página principal.
 
 ## Licencia
 

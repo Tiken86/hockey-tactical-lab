@@ -57,7 +57,8 @@ git config --global user.email "tu-email@ejemplo.com"
 ### Si el sitio no carga
 - Verifica que el repositorio sea **Public**
 - Espera 5-10 minutos después de activar Pages
-- Verifica que el archivo `seminario.html` esté en la raíz del repositorio
+- Verifica que el archivo `index.html` esté en la raíz del repositorio
+- La URL será directamente `https://TU_USUARIO.github.io/hockey-tactical-lab/` (sin necesidad de agregar `/index.html`)
 
 ### Si necesitas cambiar el nombre del repositorio
 1. Ve a Settings > General

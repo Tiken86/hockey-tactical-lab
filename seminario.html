@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hockey Tactical Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @media print { 
+            @page { size: landscape; margin: 0; } 
+            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+            .no-print { display: none !important; } 
+            .page-break { page-break-before: always; } 
+            .print-page-break { page-break-after: always; break-after: page; min-height: 100vh; width: 100vw; padding: 20px; box-sizing: border-box; position: relative; display: block; }
+            .print-container { box-shadow: none !important; border: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Componentes de Iconos SVG
+        const Icon = ({ children, className = "w-6 h-6", ...props }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+                {children}
+            </svg>
+        );
+
+        const Target = (props) => (
+            <Icon {...props}>
+                <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                <circle cx="12" cy="12" r="6" strokeWidth="2"/>
+                <circle cx="12" cy="12" r="2" strokeWidth="2"/>
+            </Icon>
+        );
+
+        const ChevronRight = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+            </Icon>
+        );
+
+        const Layout = (props) => (
+            <Icon {...props}>
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth="2"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9h18M9 21V9"/>
+            </Icon>
+        );
+
+        const ArrowRight = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </Icon>
+        );
+
+        const ShieldAlert = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </Icon>
+        );
+
+        const RefreshCw = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </Icon>
+        );
+
+        const Upload = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </Icon>
+        );
+
+        const Microscope = (props) => (
+            <Icon {...props}>
+                <circle cx="12" cy="12" r="3" strokeWidth="2"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12a3 3 0 106 0m-6 0a3 3 0 016 0m-6 0h6m-3 3v6m-3 0h6"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18v-3m0 0V9m0 6h6m-6 0H6"/>
+            </Icon>
+        );
+
+        const CheckCircle = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </Icon>
+        );
+
+        const Plus = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/>
+            </Icon>
+        );
+
+        const Save = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+            </Icon>
+        );
+
+        const Edit2 = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </Icon>
+        );
+
+        const Trash2 = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </Icon>
+        );
+
+        const Link = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </Icon>
+        );
+
+        const AlertTriangle = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </Icon>
+        );
+
+        const Timer = (props) => (
+            <Icon {...props}>
+                <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6l4 2"/>
+            </Icon>
+        );
+
+        const Sliders = (props) => (
+            <Icon {...props}>
+                <line x1="4" y1="21" x2="4" y2="14" strokeWidth="2"/>
+                <line x1="4" y1="10" x2="4" y2="3" strokeWidth="2"/>
+                <line x1="12" y1="21" x2="12" y2="12" strokeWidth="2"/>
+                <line x1="12" y1="8" x2="12" y2="3" strokeWidth="2"/>
+                <line x1="20" y1="21" x2="20" y2="16" strokeWidth="2"/>
+                <line x1="20" y1="12" x2="20" y2="3" strokeWidth="2"/>
+                <line x1="1" y1="14" x2="7" y2="14" strokeWidth="2"/>
+                <line x1="9" y1="8" x2="15" y2="8" strokeWidth="2"/>
+                <line x1="17" y1="16" x2="23" y2="16" strokeWidth="2"/>
+            </Icon>
+        );
+
+        const TrendingUp = (props) => (
+            <Icon {...props}>
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" strokeWidth="2"/>
+                <polyline points="17 6 23 6 23 12" strokeWidth="2"/>
+            </Icon>
+        );
+
+        const TrendingDown = (props) => (
+            <Icon {...props}>
+                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" strokeWidth="2"/>
+                <polyline points="17 18 23 18 23 12" strokeWidth="2"/>
+            </Icon>
+        );
+
+        const Activity = (props) => (
+            <Icon {...props}>
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" strokeWidth="2"/>
+            </Icon>
+        );
+
+        const ImageIcon = (props) => (
+            <Icon {...props}>
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="2"/>
+                <polyline points="21 15 16 10 5 21" strokeWidth="2"/>
+            </Icon>
+        );
+
+        const Printer = (props) => (
+            <Icon {...props}>
+                <polyline points="6 9 6 2 18 2 18 9" strokeWidth="2"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8" strokeWidth="2"/>
+            </Icon>
+        );
+
+        const FileJson = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </Icon>
+        );
+
+        const Info = (props) => (
+            <Icon {...props}>
+                <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 16v-4m0-4h.01"/>
+            </Icon>
+        );
+
+        const RotateCcw = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 4v6h6m-6 0a8.001 8.001 0 1015.356-2M7 4H1m15.356 2a8.003 8.003 0 01-15.356 2m15.356-2H21"/>
+            </Icon>
+        );
+
+        const Cloud = (props) => (
+            <Icon {...props}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+            </Icon>
+        );
+
+        // --- DATOS TEÓRICOS ---
+
+        const GAME_MOMENTS = [
+          {
+            id: 'MPP',
+            name: 'Momento Posesión-Posición',
+            desc: 'Mantener posesión y progresar contra estructura organizada.',
+            icon: React.createElement(Layout, { className: "w-6 h-6" }),
+            color: 'bg-blue-600',
+            borderColor: 'border-blue-600',
+            textColor: 'text-blue-600',
+            behaviors: ['Amplitud', 'Pase y apoyo', 'Cuidar bola', 'Fijar y pasar', 'Búsqueda línea pase', 'Estructura (Ocupación)']
+          },
+          {
+            id: 'MTF',
+            name: 'Transición-Finalización',
+            desc: 'Aprovechar desorganización rival para llegar a portería rápido.',
+            icon: React.createElement(ArrowRight, { className: "w-6 h-6" }),
+            color: 'bg-green-600',
+            borderColor: 'border-green-600',
+            textColor: 'text-green-600',
+            behaviors: ['Verticalidad', 'Pase y voy', 'Descarga', 'Cambio pasillo', 'Ocupación área', 'Definición']
+          },
+          {
+            id: 'MRO',
+            name: 'Recuperación Organizada',
+            desc: 'Organizarse para recuperar o evitar progresión rival.',
+            icon: React.createElement(ShieldAlert, { className: "w-6 h-6" }),
+            color: 'bg-red-600',
+            borderColor: 'border-red-600',
+            textColor: 'text-red-600',
+            behaviors: ['Actitud defensiva', 'Cerrar líneas', 'Juntar líneas', 'Aproximar-Canalizar', 'Seguir marca', 'Ayuda defensiva']
+          },
+          {
+            id: 'MRC',
+            name: 'Recuperación Circunstancial',
+            desc: 'Recuperación inmediata tras pérdida en desequilibrio.',
+            icon: React.createElement(RefreshCw, { className: "w-6 h-6" }),
+            color: 'bg-orange-600',
+            borderColor: 'border-orange-600',
+            textColor: 'text-orange-600',
+            behaviors: ['Presión 3seg', 'Repliegue', 'Cortar contra', 'Priorizar centro', 'Ralentizar (duelo)', 'Mantener fuera']
+          }
+        ];
+
+        const SITUATIONS = [
+          { label: '1 vs 1 (Duelo)', type: 'Igualdad' },
+          { label: '2 vs 1 (Superioridad)', type: 'Superioridad' },
+          { label: '1 vs 2 (Inferioridad)', type: 'Inferioridad' },
+          { label: '2 vs 2 (Parejas)', type: 'Igualdad' },
+          { label: '3 vs 2 (Creación)', type: 'Superioridad' },
+          { label: '3 vs 3 (Grupal)', type: 'Igualdad' },
+          { label: '+3 (Colectivo)', type: 'Compleja' }
+        ];
+
+        const ROLES = {
+          'OFENSIVOS (Con Bola)': [
+            'Jugador Con Bola (Portador)',
+            'Apoyo Cercano (Receptor)',
+            'Jugador Alejado (3er Hombre)'
+          ],
+          'DEFENSIVOS (Sin Bola)': [
+            'Defensor al Balón (Presionante)',
+            'Defensor en Cobertura/Ayuda',
+            'Defensor Alejado (Vigilancia)'
+          ]
+        };
+
+        const TASK_DEFINITIONS = {
+          DIRIGIDA: { name: 'Tarea Dirigida', desc: 'Mecanización sin toma de decisión compleja (Rutas, Ruedas).' },
+          ESTRUCTURADA: { name: 'Tarea Estructurada', desc: 'Situación cerrada iniciada pre-establecida (Oleadas, Superioridades fijas).' },
+          ESPECIAL: { name: 'Tarea Especial', desc: 'Juego reducido (SSP) con continuidad (Posesiones, Partidos reducidos).' },
+          COMPETITIVA: { name: 'Tarea Competitiva', desc: 'Simulación real (Partido modificado, 11vs11).' }
+        };
+
+        const INITIAL_DATA = {
+            groupName: '',
+            momentId: '',
+            customBehaviors: [], 
+            analysis: [], 
+            tasks: {
+              DIRIGIDA: null,
+              ESTRUCTURADA: null,
+              ESPECIAL: null,
+              COMPETITIVA: null
+            }
+        };
+
+        const MICROCYCLE_CONTEXT = {
+          'MD-4': {
+            name: 'MD-4 (Acel / Desacel)',
+            focus: 'Alta carga neuromuscular. Espacios reducidos, arrancadas y frenadas.',
+            rules: { space: 'Reducido (<100m2/jug)', players: 'Pocos (1v1 a 4v4)', duration: 'Corta / Series cortas' }
+          },
+          'MD-3': {
+            name: 'MD-3 (Sprints / HSR)',
+            focus: 'Alta velocidad y resistencia. Espacios amplios para alcanzar >19km/h.',
+            rules: { space: 'Amplio (Similar real)', players: 'Muchos (5v5 a 11v11)', duration: 'Larga / Series largas' }
+          }
+        };
+
+        // --- COMPONENTES ---
+
+        function TacticalHackathonApp() {
+          // --- ESTADO CON PERSISTENCIA SINCRÓNICA ---
+          
+          // Función helper para leer localStorage de forma segura
+          const getStoredValue = (key, defaultValue) => {
+            if (typeof window === 'undefined') return defaultValue;
+            try {
+              const item = localStorage.getItem(key);
+              return item ? JSON.parse(item) : defaultValue;
+            } catch (error) {
+              console.error(`Error reading localStorage key "${key}":`, error);
+              return defaultValue;
+            }
+          };
+
+          // Estados inicializados directamente desde localStorage
+          const [data, setData] = useState(() => getStoredValue('hockey_lab_data_v3', INITIAL_DATA));
+          const [step, setStep] = useState(() => getStoredValue('hockey_lab_step_v3', 0));
+          const [editingTaskType, setEditingTaskType] = useState(() => getStoredValue('hockey_lab_editing_type_v3', null));
+
+          // Estados UI temporales
+          const [analysisInput, setAnalysisInput] = useState({ situation: '', role: '', problem: '', cause: '', solution: '', behavior: '' });
+          const [editingAnalysisId, setEditingAnalysisId] = useState(null);
+          const [newBehavior, setNewBehavior] = useState('');
+          const [isAddingBehavior, setIsAddingBehavior] = useState(false);
+          const [saveStatus, setSaveStatus] = useState('saved'); // 'saving', 'saved', 'error'
+          
+          const fileInputRef = useRef(null);
+          const imageInputRef = useRef(null);
+
+          // --- EFECTOS DE GUARDADO INSTANTÁNEO ---
+
+          useEffect(() => {
+            if (typeof window !== 'undefined') {
+              setSaveStatus('saving');
+              try {
+                localStorage.setItem('hockey_lab_data_v3', JSON.stringify(data));
+                // Pequeño timeout solo para el efecto visual de "Guardando..."
+                setTimeout(() => setSaveStatus('saved'), 300);
+              } catch (error) {
+                if (error.name === 'QuotaExceededError') {
+                  setSaveStatus('error');
+                  alert('⚠️ El espacio de almacenamiento local está lleno. Por favor, exporta tu proyecto (JSON) y reinicia la aplicación.');
+                  setTimeout(() => setSaveStatus('saved'), 3000);
+                } else {
+                  setTimeout(() => setSaveStatus('saved'), 300);
+                }
+              }
+            }
+          }, [data]);
+
+          useEffect(() => {
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('hockey_lab_step_v3', JSON.stringify(step));
+              } catch (error) {
+                console.warn('Error guardando paso:', error);
+              }
+            }
+          }, [step]);
+
+          useEffect(() => {
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('hockey_lab_editing_type_v3', JSON.stringify(editingTaskType));
+              } catch (error) {
+                console.warn('Error guardando tipo de edición:', error);
+              }
+            }
+          }, [editingTaskType]);
+
+          // Recuperación automática de sesión al montar si estamos en step 0 pero tenemos datos
+          useEffect(() => {
+            if (step === 0 && data.groupName && data.momentId) {
+               // Si ya hay datos, saltar intro
+               setStep(3); 
+            }
+          }, []);
+
+          // --- HELPERS ---
+
+          const updateData = (field, value) => setData(prev => ({ ...prev, [field]: value }));
+          const selectedMoment = GAME_MOMENTS.find(m => m.id === data.momentId) || GAME_MOMENTS[0];
+          
+          const isOffensive = selectedMoment.id === 'MPP' || selectedMoment.id === 'MTF';
+          const roleOptions = isOffensive ? ROLES['OFENSIVOS (Con Bola)'] : ROLES['DEFENSIVOS (Sin Bola)'];
+
+          const availableBehaviors = [...selectedMoment.behaviors, ...data.customBehaviors];
+
+          const clearAllData = () => {
+            if(window.confirm("⚠️ ¿BORRAR TODO? Se perderá el progreso actual.")) {
+                localStorage.clear();
+                setData(INITIAL_DATA);
+                setStep(0);
+                setEditingTaskType(null);
+                window.location.reload();
+            }
+          };
+
+          const handleAddCustomBehavior = () => {
+            if (newBehavior.trim()) {
+              updateData('customBehaviors', [...data.customBehaviors, newBehavior.trim()]);
+              setAnalysisInput({...analysisInput, behavior: newBehavior.trim()});
+              setNewBehavior('');
+              setIsAddingBehavior(false);
+            }
+          };
+
+          const addAnalysisItem = () => {
+            if (analysisInput.problem && analysisInput.cause && analysisInput.solution) {
+              if (editingAnalysisId) {
+                const updatedAnalysis = data.analysis.map(item => 
+                  item.id === editingAnalysisId ? { ...analysisInput, id: editingAnalysisId } : item
+                );
+                updateData('analysis', updatedAnalysis);
+                setEditingAnalysisId(null);
+              } else {
+                updateData('analysis', [...data.analysis, { ...analysisInput, id: Date.now() }]);
+              }
+              setAnalysisInput({ situation: '', role: '', problem: '', cause: '', solution: '', behavior: '' }); 
+            }
+          };
+
+          const editAnalysisItem = (item) => {
+            setAnalysisInput(item);
+            setEditingAnalysisId(item.id);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          };
+
+          const cancelEdit = () => {
+            setAnalysisInput({ situation: '', role: '', problem: '', cause: '', solution: '', behavior: '' });
+            setEditingAnalysisId(null);
+          };
+
+          const removeAnalysisItem = (id) => {
+            updateData('analysis', data.analysis.filter(item => item.id !== id));
+            if (editingAnalysisId === id) cancelEdit();
+          };
+
+          const saveTask = (taskData) => {
+            setData(prev => ({
+              ...prev,
+              tasks: { ...prev.tasks, [editingTaskType]: taskData }
+            }));
+            // Limpiar borrador específico si existiera
+            localStorage.removeItem(`hockey_lab_draft_${editingTaskType}_v3`);
+            setStep(3);
+            setEditingTaskType(null);
+          };
+
+          const exportProject = () => {
+            const dataStr = JSON.stringify(data, null, 2);
+            const link = document.createElement('a');
+            link.download = `tactical-lab-${data.groupName.replace(/\s+/g, '-').toLowerCase() || 'proyecto'}.json`;
+            link.href = URL.createObjectURL(new Blob([dataStr], { type: "application/json" }));
+            link.click();
+          };
+
+          const handleFileUpload = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              try {
+                const loaded = JSON.parse(ev.target.result);
+                if (loaded && typeof loaded === 'object' && loaded.groupName !== undefined) {
+                   setData(loaded); 
+                   setStep(3);
+                } else {
+                   throw new Error("Formato incorrecto");
+                }
+              } catch (err) { 
+                alert("Error al leer el archivo. Asegúrate de que es un archivo .json válido."); 
+              }
+            };
+            reader.readAsText(file);
+          };
+
+          // --- COMPONENTES DE UI COMUNES ---
+          
+          const StatusBadge = () => {
+            if (saveStatus === 'saving') {
+              return React.createElement('div', { className: "fixed top-4 right-4 z-50 bg-white/90 backdrop-blur shadow-sm border border-slate-200 rounded-full px-3 py-1 text-xs font-medium flex items-center gap-2 print:hidden" },
+                React.createElement(RefreshCw, { className: "w-3 h-3 animate-spin text-blue-500" }),
+                ' Guardando...'
+              );
+            } else if (saveStatus === 'error') {
+              return React.createElement('div', { className: "fixed top-4 right-4 z-50 bg-white/90 backdrop-blur shadow-sm border border-red-200 rounded-full px-3 py-1 text-xs font-medium flex items-center gap-2 print:hidden" },
+                React.createElement(AlertTriangle, { className: "w-3 h-3 text-red-500" }),
+                ' Error al guardar'
+              );
+            } else {
+              return React.createElement('div', { className: "fixed top-4 right-4 z-50 bg-white/90 backdrop-blur shadow-sm border border-slate-200 rounded-full px-3 py-1 text-xs font-medium flex items-center gap-2 print:hidden" },
+                React.createElement(Cloud, { className: "w-3 h-3 text-green-500" }),
+                ' Guardado'
+              );
+            }
+          };
+
+          // --- VISTAS ---
+
+          // 0. INTRO
+          if (step === 0) return (
+            <div className="min-h-screen bg-slate-900 text-white p-6 flex flex-col items-center justify-center print:hidden">
+              <div className="max-w-2xl w-full text-center space-y-8">
+                <div className="flex justify-center mb-4">
+                    <div className="bg-gradient-to-r from-lime-400 to-green-600 p-4 rounded-full shadow-lg shadow-green-500/30">
+                      <Target className="w-12 h-12 text-slate-900" />
+                    </div>
+                </div>
+                <h1 className="text-4xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-green-500">HOCKEY TACTICAL LAB</h1>
+                <p className="text-lg md:text-xl text-slate-300">Seminario Práctico: Del Modelo a la Tarea</p>
+                <div className="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-xl space-y-6 w-full">
+                  <input 
+                    type="text" placeholder="Nombre del Grupo / Staff..." 
+                    className="w-full p-4 bg-slate-900 border border-slate-600 rounded-lg text-white focus:border-lime-500 outline-none"
+                    value={data.groupName} onChange={(e) => updateData('groupName', e.target.value)}
+                  />
+                  <button 
+                    disabled={!data.groupName} onClick={() => setStep(data.momentId ? 3 : 1)}
+                    className="w-full bg-lime-500 hover:bg-lime-400 disabled:opacity-50 text-slate-900 font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                  >
+                    {data.momentId ? 'Continuar Trabajo' : 'Iniciar Hackathon'} <ChevronRight className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700">
+                     <button onClick={() => fileInputRef.current.click()} className="text-slate-400 hover:text-white text-sm flex items-center justify-center gap-2 w-full bg-slate-700/50 py-2 rounded">
+                       <Upload className="w-4 h-4" /> Cargar Proyecto
+                     </button>
+                     <button onClick={clearAllData} className="text-red-400 hover:text-red-300 text-sm flex items-center justify-center gap-2 w-full bg-slate-700/50 py-2 rounded">
+                       <RotateCcw className="w-4 h-4" /> Reiniciar Todo
+                     </button>
+                  </div>
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".json" />
+                </div>
+              </div>
+            </div>
+          );
+
+          // 1. CONTEXTO
+          if (step === 1) return (
+            <div className="min-h-screen bg-slate-50 p-4 md:p-6 print:hidden">
+              <StatusBadge />
+              <div className="max-w-4xl mx-auto">
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">Fase 1: Contexto Táctico</h2>
+                <p className="text-slate-500 mb-8 text-sm md:text-base">Seleccionad el momento del juego asignado a vuestro grupo.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {GAME_MOMENTS.map((m) => (
+                    <button key={m.id} onClick={() => { updateData('momentId', m.id); setStep(2); }}
+                      className="group relative bg-white p-6 rounded-xl border-2 border-slate-200 hover:border-blue-500 text-left shadow-sm hover:shadow-md transition-all">
+                      <div className={`absolute top-0 left-0 w-1 h-full ${m.color}`}></div>
+                      <div className="flex justify-between items-start mb-2">
+                        <div className={`p-3 rounded-lg ${m.color} text-white`}>{m.icon}</div>
+                        <span className="text-3xl md:text-4xl font-black text-slate-100">{m.id}</span>
+                      </div>
+                      <h3 className="text-lg md:text-xl font-bold text-slate-800 group-hover:text-blue-600">{m.name}</h3>
+                      <p className="text-xs md:text-sm text-slate-500 mt-2">{m.desc}</p>
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setStep(0)} className="mt-8 text-slate-500 underline">Volver</button>
+              </div>
+            </div>
+          );
+
+          // 2. ANÁLISIS DETALLADO
+          if (step === 2) return (
+            <div className="min-h-screen bg-slate-50 p-4 md:p-6 print:hidden">
+              <StatusBadge />
+              <div className="max-w-5xl mx-auto">
+                <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+                    <span className={`px-3 py-1 rounded text-xs font-bold text-white w-fit ${selectedMoment.color}`}>{selectedMoment.id}</span>
+                    <h2 className="text-xl md:text-2xl font-bold text-slate-800">Fase 2: Anatomía del Problema</h2>
+                </div>
+
+                <div className={`bg-white p-4 md:p-6 rounded-xl shadow-lg border transition-all mb-8 ${editingAnalysisId ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-200'}`}>
+                   <div className="flex items-center justify-between gap-2 mb-6 border-b border-slate-100 pb-4">
+                      <div className="flex items-center gap-2">
+                        <Microscope className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                        <h3 className="text-base md:text-lg font-bold text-slate-800">
+                          {editingAnalysisId ? 'Editando Análisis' : 'Nuevo Micro-Análisis'}
+                        </h3>
+                      </div>
+                      {editingAnalysisId && (
+                        <button onClick={cancelEdit} className="text-xs text-slate-500 hover:text-slate-800 underline">Cancelar</button>
+                      )}
+                   </div>
+                   
+                   {/* 1. CONTEXTO NUMÉRICO Y ROL */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                      <div>
+                         <label className="text-xs font-bold text-slate-500 uppercase block mb-2">A. Situación Numérica</label>
+                         <select 
+                            className="w-full p-3 bg-white border rounded-lg text-sm focus:border-blue-500 outline-none"
+                            value={analysisInput.situation}
+                            onChange={(e) => setAnalysisInput({...analysisInput, situation: e.target.value})}
+                         >
+                            <option value="">-- Seleccionar --</option>
+                            {SITUATIONS.map((s, i) => (
+                               <option key={i} value={`${s.label} [${s.type}]`}>{s.label}</option>
+                            ))}
+                         </select>
+                      </div>
+                      
+                      <div>
+                         <label className="text-xs font-bold text-slate-500 uppercase block mb-2">B. Rol del Jugador Clave</label>
+                         <select 
+                            className="w-full p-3 bg-white border rounded-lg text-sm focus:border-blue-500 outline-none"
+                            value={analysisInput.role}
+                            onChange={(e) => setAnalysisInput({...analysisInput, role: e.target.value})}
+                         >
+                            <option value="">-- Seleccionar --</option>
+                            {roleOptions.map((r, i) => (
+                               <option key={i} value={r}>{r}</option>
+                            ))}
+                         </select>
+                      </div>
+                   </div>
+
+                   {/* 2. ANÁLISIS COGNITIVO */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4">
+                      <div>
+                         <label className="text-xs font-bold text-slate-500 uppercase block mb-1">1. Observación (Problema)</label>
+                         <textarea 
+                            className="w-full p-3 bg-slate-50 border rounded-lg text-sm h-20 md:h-24 focus:border-blue-500 outline-none resize-none"
+                            placeholder="Ej: El apoyo se esconde..."
+                            value={analysisInput.problem}
+                            onChange={(e) => setAnalysisInput({...analysisInput, problem: e.target.value})}
+                         />
+                      </div>
+                      <div>
+                         <label className="text-xs font-bold text-slate-500 uppercase block mb-1">2. Causa Táctica (Why?)</label>
+                         <textarea 
+                            className="w-full p-3 bg-slate-50 border rounded-lg text-sm h-20 md:h-24 focus:border-blue-500 outline-none resize-none"
+                            placeholder="Ej: El rival cierra pasillo..."
+                            value={analysisInput.cause}
+                            onChange={(e) => setAnalysisInput({...analysisInput, cause: e.target.value})}
+                         />
+                      </div>
+                      
+                      <div>
+                         <label className="text-xs font-bold text-slate-500 uppercase block mb-1">3. Solución Táctica</label>
+                         <input 
+                            className="w-full p-3 bg-slate-50 border rounded-lg text-sm focus:border-green-500 outline-none"
+                            placeholder="Ej: Desmarque de ruptura..."
+                            value={analysisInput.solution}
+                            onChange={(e) => setAnalysisInput({...analysisInput, solution: e.target.value})}
+                         />
+                      </div>
+                      <div>
+                         <div className="flex justify-between items-end mb-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase block">4. Comportamiento Modelo</label>
+                            <button onClick={() => setIsAddingBehavior(!isAddingBehavior)} className="text-xs text-blue-500 font-bold hover:underline">+ Añadir Propio</button>
+                         </div>
+                         
+                         {isAddingBehavior ? (
+                           <div className="flex gap-2">
+                              <input 
+                                autoFocus
+                                className="w-full p-3 bg-white border border-blue-300 rounded-lg text-sm outline-none"
+                                placeholder="Nuevo comportamiento..."
+                                value={newBehavior}
+                                onChange={(e) => setNewBehavior(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddCustomBehavior()}
+                              />
+                              <button onClick={handleAddCustomBehavior} className="bg-blue-600 text-white px-3 rounded-lg"><CheckCircle className="w-4 h-4"/></button>
+                           </div>
+                         ) : (
+                           <select 
+                              className="w-full p-3 bg-slate-50 border rounded-lg text-sm focus:border-green-500 outline-none"
+                              value={analysisInput.behavior}
+                              onChange={(e) => setAnalysisInput({...analysisInput, behavior: e.target.value})}
+                           >
+                              <option value="">-- Seleccionar --</option>
+                              {availableBehaviors.map((b, i) => (
+                                 <option key={i} value={b}>{b}</option>
+                              ))}
+                           </select>
+                         )}
+                      </div>
+                   </div>
+                   
+                   <button 
+                     onClick={addAnalysisItem}
+                     disabled={!analysisInput.problem || !analysisInput.situation || !analysisInput.role}
+                     className={`w-full text-white py-3 rounded-lg font-bold disabled:opacity-50 transition-all flex items-center justify-center gap-2 ${editingAnalysisId ? 'bg-blue-600 hover:bg-blue-500' : 'bg-slate-800 hover:bg-slate-700'}`}
+                   >
+                     {editingAnalysisId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />} 
+                     {editingAnalysisId ? 'Actualizar Análisis' : 'Añadir Análisis'}
+                   </button>
+                </div>
+
+                {/* LISTA DE ANÁLISIS */}
+                <div className="space-y-4 mb-8">
+                   {data.analysis.map((item) => (
+                      <div key={item.id} className={`bg-white border rounded-xl p-5 relative group hover:shadow-md transition-shadow ${editingAnalysisId === item.id ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50' : 'border-slate-200'}`}>
+                         <div className="absolute top-4 right-4 flex gap-2">
+                            <button onClick={() => editAnalysisItem(item)} className="text-slate-300 hover:text-blue-500 p-1" title="Editar"><Edit2 className="w-4 h-4"/></button>
+                            <button onClick={() => removeAnalysisItem(item.id)} className="text-slate-300 hover:text-red-500 p-1" title="Eliminar"><Trash2 className="w-4 h-4"/></button>
+                         </div>
+                         
+                         <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-slate-100/50">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">{item.situation}</span>
+                            <ArrowRight className="w-3 h-3 text-slate-300" />
+                            <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded truncate max-w-[150px] md:max-w-none">{item.role}</span>
+                         </div>
+
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                               <p className="text-xs font-bold text-red-500 uppercase">Problema</p>
+                               <p className="text-sm text-slate-700 mb-2">{item.problem}</p>
+                               <p className="text-xs font-bold text-slate-400 uppercase">Causa</p>
+                               <p className="text-sm text-slate-600 italic">"{item.cause}"</p>
+                            </div>
+                            <div className="md:border-l md:border-slate-100 md:pl-4">
+                               <p className="text-xs font-bold text-green-600 uppercase">Solución</p>
+                               <p className="text-sm text-slate-800 font-medium mb-2">{item.solution}</p>
+                               <p className="text-xs font-bold text-slate-400 uppercase">Comportamiento</p>
+                               <span className="inline-block bg-slate-100 px-2 py-1 rounded text-xs font-bold text-slate-600">{item.behavior}</span>
+                            </div>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+
+                <div className="flex justify-between pb-8">
+                   <button onClick={() => setStep(1)} className="text-slate-500">Atrás</button>
+                   <button onClick={() => setStep(3)} disabled={data.analysis.length === 0} className="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-500 disabled:opacity-50 disabled:shadow-none transition-all text-sm md:text-base">
+                     Ir al Diseño de Tareas
+                   </button>
+                </div>
+              </div>
+            </div>
+          );
+
+          // 3. DASHBOARD
+          if (step === 3) {
+            const completedCount = Object.values(data.tasks).filter(t => t !== null).length;
+            return (
+              <div className="min-h-screen bg-slate-50 p-4 md:p-6 print:hidden">
+                <StatusBadge />
+                <div className="max-w-5xl mx-auto">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                     <div>
+                       <h2 className="text-2xl md:text-3xl font-black text-slate-800">Planning de Sesión</h2>
+                       <p className="text-slate-500 text-sm md:text-base">Diseñad las 4 tareas basándoos en vuestro análisis previo.</p>
+                     </div>
+                     <div className="text-left md:text-right w-full md:w-auto bg-white p-3 rounded-lg md:bg-transparent md:p-0">
+                        <span className="text-3xl md:text-4xl font-black text-blue-600">{completedCount}/4</span>
+                        <span className="text-xs font-bold text-slate-400 block uppercase">Tareas Completadas</span>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
+                    {Object.keys(TASK_DEFINITIONS).map((type) => {
+                      const isDone = !!data.tasks[type];
+                      return (
+                        <div key={type} 
+                          onClick={() => { setEditingTaskType(type); setStep(4); }}
+                          className={`relative p-6 rounded-xl border-2 cursor-pointer transition-all active:scale-95 hover:-translate-y-1 hover:shadow-lg ${isDone ? 'bg-white border-green-500' : 'bg-slate-100 border-dashed border-slate-300 hover:border-blue-400'}`}
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div className={`p-2 rounded-lg ${isDone ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
+                               {isDone ? <CheckCircle className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{type}</span>
+                          </div>
+                          <h3 className={`text-xl font-bold ${isDone ? 'text-slate-800' : 'text-slate-500'}`}>{TASK_DEFINITIONS[type].name}</h3>
+                          <p className="text-sm text-slate-400 mb-4">{TASK_DEFINITIONS[type].desc}</p>
+                          {isDone && (
+                            <div className="text-xs font-medium text-green-600 bg-green-50 px-3 py-1 rounded-full inline-block">
+                               ¡Diseñada!
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="flex justify-between pb-8">
+                     <button onClick={() => setStep(2)} className="text-slate-500">Volver</button>
+                     <button onClick={() => setStep(5)} className={`px-6 py-3 rounded-lg font-bold transition-all text-sm md:text-base ${completedCount === 4 ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg' : 'bg-slate-200 text-slate-400'}`}>
+                        {completedCount === 4 ? 'Ver Informe Final' : 'Completad todas las tareas'}
+                     </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // 4. EDITOR DE TAREA
+          if (step === 4 && editingTaskType) {
+            const taskDef = TASK_DEFINITIONS[editingTaskType];
+            const existingTaskData = data.tasks[editingTaskType];
+            
+            const Editor = () => {
+              // INICIALIZAR CON DATOS O BORRADOR PERSISTENTE
+              const [localData, setLocalData] = useState(() => {
+                if (typeof window !== 'undefined') {
+                    const draftKey = `hockey_lab_draft_${editingTaskType}_v3`;
+                    const savedDraft = localStorage.getItem(draftKey);
+                    if (savedDraft) return JSON.parse(savedDraft);
+                }
+                return existingTaskData || { 
+                    objective: '', players: '', space: '', rules: '', image: null, linkedAnalysisIds: [],
+                    adaptMD4: '', adaptMD3: '', progression: '', regression: '' 
+                };
+              });
+              
+              // Guardado en Borrador Instantáneo (sin imágenes para evitar exceder localStorage)
+              useEffect(() => {
+                try {
+                  // Guardar solo datos de texto, sin imagen en el borrador
+                  const draftData = { ...localData };
+                  delete draftData.image; // No guardar imagen en borrador
+                  localStorage.setItem(`hockey_lab_draft_${editingTaskType}_v3`, JSON.stringify(draftData));
+                } catch (error) {
+                  // Si excede la cuota, limpiar borradores antiguos e intentar de nuevo
+                  if (error.name === 'QuotaExceededError') {
+                    try {
+                      // Limpiar todos los borradores antiguos
+                      Object.keys(TASK_DEFINITIONS).forEach(type => {
+                        localStorage.removeItem(`hockey_lab_draft_${type}_v3`);
+                      });
+                      // Intentar guardar de nuevo sin imagen
+                      const draftData = { ...localData };
+                      delete draftData.image;
+                      localStorage.setItem(`hockey_lab_draft_${editingTaskType}_v3`, JSON.stringify(draftData));
+                    } catch (e) {
+                      console.warn('No se pudo guardar el borrador:', e);
+                    }
+                  }
+                }
+              }, [localData, editingTaskType]);
+
+              // Función para comprimir imágenes
+              const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
+                return new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                      const canvas = document.createElement('canvas');
+                      let width = img.width;
+                      let height = img.height;
+
+                      if (width > maxWidth) {
+                        height = (height * maxWidth) / width;
+                        width = maxWidth;
+                      }
+
+                      canvas.width = width;
+                      canvas.height = height;
+
+                      const ctx = canvas.getContext('2d');
+                      ctx.drawImage(img, 0, 0, width, height);
+
+                      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                      resolve(compressedBase64);
+                    };
+                    img.src = e.target.result;
+                  };
+                  reader.readAsDataURL(file);
+                });
+              };
+
+              const handleImg = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  // Comprimir imagen antes de guardarla
+                  try {
+                    const compressedImage = await compressImage(file);
+                    setLocalData({...localData, image: compressedImage});
+                  } catch (error) {
+                    console.warn('Error comprimiendo imagen, usando original:', error);
+                    // Si falla la compresión, intentar con imagen original
+                    try {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        // Verificar tamaño antes de guardar
+                        const base64 = ev.target.result;
+                        if (base64.length > 1000000) { // ~1MB
+                          alert('⚠️ La imagen es muy grande. Se recomienda usar una imagen más pequeña para evitar problemas de almacenamiento.');
+                        }
+                        setLocalData({...localData, image: base64});
+                      };
+                      reader.readAsDataURL(file);
+                    } catch (err) {
+                      alert('Error al cargar la imagen. Intenta con una imagen más pequeña.');
+                    }
+                  }
+                }
+              };
+
+              const toggleAnalysisLink = (id) => {
+                const current = localData.linkedAnalysisIds || [];
+                if (current.includes(id)) {
+                   setLocalData({...localData, linkedAnalysisIds: current.filter(x => x !== id)});
+                } else {
+                   setLocalData({...localData, linkedAnalysisIds: [...current, id]});
+                }
+              };
+
+              return (
+                <div className="max-w-6xl mx-auto pb-20">
+                  <StatusBadge />
+                  <div className="flex items-center gap-4 mb-6">
+                    <button onClick={() => { setEditingTaskType(null); setStep(3); }} className="p-2 hover:bg-slate-200 rounded-full"><ChevronRight className="w-6 h-6 rotate-180" /></button>
+                    <div>
+                       <div className="flex items-center gap-2">
+                           <h2 className="text-xl md:text-2xl font-bold text-slate-800">Diseñando: {taskDef.name}</h2>
+                       </div>
+                       <p className="text-slate-500 text-xs md:text-sm">{taskDef.desc}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Columna Izquierda: REFLEXIÓN */}
+                    <div className="space-y-6">
+                       <div className="bg-blue-50 p-4 md:p-5 rounded-xl shadow-sm border border-blue-200">
+                          <h4 className="text-xs font-bold text-blue-800 uppercase mb-3 flex items-center gap-2">
+                            <Link className="w-4 h-4" /> Conexión Reflexiva
+                          </h4>
+                          <p className="text-xs text-blue-700 mb-4 font-medium">
+                             ¿Qué problema específico resuelve esta tarea?
+                          </p>
+                          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                            {data.analysis.map((a, i) => {
+                              const isSelected = (localData.linkedAnalysisIds || []).includes(a.id);
+                              return (
+                                <div 
+                                  key={i} 
+                                  onClick={() => toggleAnalysisLink(a.id)}
+                                  className={`cursor-pointer text-xs p-3 rounded-lg border transition-all ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white border-blue-100 text-slate-600 hover:border-blue-300'}`}
+                                >
+                                  <div className="flex justify-between items-start mb-1">
+                                     <span className={`font-bold ${isSelected ? 'text-blue-100' : 'text-slate-800'}`}>{a.situation}</span>
+                                     {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                                  </div>
+                                  <p className={`mb-1 ${isSelected ? 'text-white' : 'text-slate-800 font-medium'}`}>{a.problem}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {(!localData.linkedAnalysisIds || localData.linkedAnalysisIds.length === 0) && (
+                             <div className="mt-3 flex items-center gap-2 text-xs text-red-500 font-bold bg-red-50 p-2 rounded">
+                                <AlertTriangle className="w-4 h-4" /> Selecciona al menos un foco.
+                             </div>
+                          )}
+                       </div>
+                    </div>
+
+                    {/* Columna Derecha: DISEÑO */}
+                    <div className="md:col-span-2 bg-white p-4 md:p-6 rounded-xl shadow-lg border border-slate-200 space-y-5">
+                       <div>
+                         <label className="font-bold text-sm text-slate-700 block mb-1">Objetivo Didáctico</label>
+                         <input className="w-full p-3 bg-slate-50 border rounded-lg outline-none focus:border-blue-500" placeholder="Ej: Mejorar la salida de 4..." value={localData.objective} onChange={e => setLocalData({...localData, objective: e.target.value})} />
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div>
+                           <label className="font-bold text-sm text-slate-700 block mb-1">Espacio</label>
+                           <input className="w-full p-3 bg-slate-50 border rounded-lg outline-none focus:border-blue-500" placeholder="Dimensiones..." value={localData.space} onChange={e => setLocalData({...localData, space: e.target.value})} />
+                         </div>
+                         <div>
+                           <label className="font-bold text-sm text-slate-700 block mb-1">Jugadores</label>
+                           <input className="w-full p-3 bg-slate-50 border rounded-lg outline-none focus:border-blue-500" placeholder="Ej: 4vs4 + 2C" value={localData.players} onChange={e => setLocalData({...localData, players: e.target.value})} />
+                         </div>
+                       </div>
+                       
+                       <div>
+                         <label className="font-bold text-sm text-slate-700 block mb-1">Reglas de Provocación / Descripción</label>
+                         <textarea className="w-full h-32 p-3 bg-slate-50 border rounded-lg outline-none resize-none focus:border-blue-500" placeholder="Desarrollo de la tarea y reglas..." value={localData.rules} onChange={e => setLocalData({...localData, rules: e.target.value})} />
+                       </div>
+
+                       {/* NUEVAS SECCIONES: VARIABILIDAD Y ADAPTABILIDAD */}
+                       <div className="border-t border-slate-100 pt-4">
+                           <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-4"><Sliders className="w-4 h-4"/> Variabilidad y Adaptabilidad</h4>
+                           
+                           {/* PROGRESIÓN / REGRESIÓN */}
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                               <div>
+                                   <label className="text-xs font-bold text-green-600 block mb-1 flex items-center gap-1"><TrendingUp className="w-3 h-3"/> Progresión (+ Difícil)</label>
+                                   <textarea className="w-full h-20 p-3 bg-green-50/50 border border-green-100 rounded-lg text-xs outline-none resize-none focus:border-green-500" placeholder="¿Cómo lo complicamos?" value={localData.progression} onChange={e => setLocalData({...localData, progression: e.target.value})} />
+                               </div>
+                               <div>
+                                   <label className="text-xs font-bold text-orange-600 block mb-1 flex items-center gap-1"><TrendingDown className="w-3 h-3"/> Regresión (Facilitador)</label>
+                                   <textarea className="w-full h-20 p-3 bg-orange-50/50 border border-orange-100 rounded-lg text-xs outline-none resize-none focus:border-orange-500" placeholder="¿Cómo lo facilitamos?" value={localData.regression} onChange={e => setLocalData({...localData, regression: e.target.value})} />
+                               </div>
+                           </div>
+
+                           {/* ADAPTACIÓN A MICROCICLO */}
+                           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                <label className="text-xs font-bold text-slate-500 block mb-2 flex items-center gap-1"><Activity className="w-3 h-3"/> Adaptaciones Condicionales</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div>
+                                         <input className="w-full p-2 bg-white border rounded text-xs" placeholder="Adaptación para MD-4 (Acel/Desacel)..." value={localData.adaptMD4} onChange={e => setLocalData({...localData, adaptMD4: e.target.value})} />
+                                     </div>
+                                     <div>
+                                         <input className="w-full p-2 bg-white border rounded text-xs" placeholder="Adaptación para MD-3 (Sprints)..." value={localData.adaptMD3} onChange={e => setLocalData({...localData, adaptMD3: e.target.value})} />
+                                     </div>
+                                </div>
+                           </div>
+                       </div>
+
+                       <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:bg-slate-50 cursor-pointer" onClick={() => imageInputRef.current.click()}>
+                          <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImg} />
+                          {localData.image ? (
+                            <div className="relative h-32">
+                               <img src={localData.image} className="h-full mx-auto object-contain" alt="Diagrama" />
+                               <button onClick={(e) => { e.stopPropagation(); setLocalData({...localData, image: null}); }} className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-full"><Trash2 className="w-3 h-3"/></button>
+                            </div>
+                          ) : (
+                            <div className="text-slate-400 text-sm flex flex-col items-center gap-1"><ImageIcon className="w-6 h-6" /><span>Click para subir gráfico/foto pizarra</span></div>
+                          )}
+                       </div>
+                       
+                       <button 
+                         onClick={() => saveTask(localData)} 
+                         disabled={!localData.objective || !localData.rules || !localData.linkedAnalysisIds || localData.linkedAnalysisIds.length === 0} 
+                         className="w-full bg-slate-900 text-white py-4 rounded-lg font-bold hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2 text-sm md:text-base sticky bottom-4 shadow-xl"
+                       >
+                         <Save className="w-4 h-4" /> Finalizar y Guardar Tarea
+                       </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            };
+            return <div className="min-h-screen bg-slate-50 p-4 md:p-6 print:hidden"><Editor /></div>;
+          }
+
+          // 5. RESUMEN FINAL E IMPRESIÓN
+          if (step === 5) {
+            return (
+              <div className="min-h-screen bg-slate-100 p-4 md:p-8 print:p-0 print:bg-white">
+                <style>{`
+                  @media print { 
+                    @page { size: landscape; margin: 0; } 
+                    body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+                    .no-print { display: none !important; } 
+                    .print-page-break { page-break-after: always; break-after: page; min-height: 100vh; width: 100vw; padding: 20px; box-sizing: border-box; position: relative; display: block; }
+                    .print-container { box-shadow: none !important; border: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
+                  }
+                `}</style>
+
+                <div className="max-w-6xl mx-auto">
+                   <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 no-print">
+                      <h2 className="text-2xl font-bold text-slate-800">Informe Técnico Final</h2>
+                      <div className="flex flex-wrap gap-3 justify-center">
+                         <button onClick={() => setStep(3)} className="text-slate-500 px-4 text-sm">Seguir Editando</button>
+                         <button onClick={() => window.print()} className="bg-slate-800 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm shadow-lg"><Printer className="w-4 h-4"/> Imprimir / Guardar PDF</button>
+                         <button onClick={exportProject} className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm"><FileJson className="w-4 h-4"/> Guardar JSON</button>
+                      </div>
+                   </div>
+
+                   {/* PÁGINA 1: PORTADA Y ANÁLISIS */}
+                   <div className="print-page-break print-container bg-white p-8 rounded-xl shadow-lg border border-slate-200 mb-8">
+                      <div className={`h-2 w-full ${selectedMoment.color} mb-6`}></div>
+                      <div className="flex justify-between items-start mb-8">
+                         <div>
+                            <h1 className="text-4xl font-black text-slate-900 mb-2">{data.groupName}</h1>
+                            <p className="text-xl text-slate-500">Propuesta de Intervención Táctica</p>
+                         </div>
+                         <div className="text-right">
+                            <span className={`px-4 py-2 rounded-lg ${selectedMoment.color} text-white font-bold`}>{selectedMoment.id}</span>
+                            <p className="text-sm text-slate-400 mt-1">{new Date().toLocaleDateString()}</p>
+                         </div>
+                      </div>
+                      
+                      <div className="mb-8">
+                        <h3 className="font-bold text-slate-700 uppercase tracking-wider text-sm mb-4 border-b pb-2">1. Análisis Táctico</h3>
+                        <table className="w-full text-sm text-left">
+                          <thead className="bg-slate-50 text-slate-500 font-bold uppercase">
+                            <tr>
+                              <th className="p-3">Contexto</th>
+                              <th className="p-3">Problema / Causa</th>
+                              <th className="p-3">Solución Táctica</th>
+                              <th className="p-3">Comportamiento</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.analysis.map((a) => (
+                              <tr key={a.id} className="border-b border-slate-100">
+                                <td className="p-3">
+                                   <div className="font-bold text-slate-800">{a.situation}</div>
+                                   <div className="text-xs text-slate-500">{a.role}</div>
+                                </td>
+                                <td className="p-3">
+                                   <div className="text-slate-800 mb-1">{a.problem}</div>
+                                   <div className="text-xs text-slate-500 italic">"{a.cause}"</div>
+                                </td>
+                                <td className="p-3 text-green-700 font-bold">{a.solution}</td>
+                                <td className="p-3"><span className="bg-slate-100 px-2 py-1 rounded text-xs">{a.behavior}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      <div className="no-print mt-8 p-4 bg-blue-50 rounded-lg text-center text-blue-800 text-sm">
+                         <Info className="w-4 h-4 inline mr-2"/> 
+                         Pulsa "Imprimir / Guardar PDF" para ver las fichas de tarea individuales.
+                      </div>
+                   </div>
+
+                   {/* PÁGINAS DE TAREAS (UNA POR PÁGINA) */}
+                   {Object.keys(data.tasks).map((type) => {
+                      const task = data.tasks[type];
+                      if (!task) return null;
+                      const linkedAnalysis = data.analysis.filter(a => (task.linkedAnalysisIds || []).includes(a.id));
+
+                      return (
+                         <div key={type} className="print-page-break print-container bg-white border-2 border-slate-100 rounded-xl overflow-hidden mb-6">
+                            <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
+                               <div>
+                                 <span className="font-black text-2xl text-slate-800 uppercase block">{TASK_DEFINITIONS[type].name}</span>
+                                 <span className="text-xs text-slate-500">{TASK_DEFINITIONS[type].desc}</span>
+                               </div>
+                               <span className="text-sm font-bold px-4 py-2 rounded bg-slate-100 text-slate-600">
+                                  Ficha Técnica
+                               </span>
+                            </div>
+                            <div className="p-8 flex flex-col h-full">
+                               {/* CONEXIÓN */}
+                               <div className="mb-6 bg-blue-50 p-3 rounded border border-blue-100">
+                                  <span className="font-bold text-blue-800 text-xs block mb-1 uppercase tracking-wider">Problemas a Resolver</span>
+                                  <ul className="list-disc pl-4 text-blue-700 text-sm">
+                                     {linkedAnalysis.map((a, i) => (
+                                       <li key={i}><strong>{a.situation}:</strong> {a.solution}</li>
+                                     ))}
+                                  </ul>
+                               </div>
+
+                               <div className="flex flex-row gap-8 h-full">
+                                   <div className="flex-1 flex flex-col gap-6">
+                                      <div>
+                                        <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider mb-1">Objetivo Didáctico</span>
+                                        <p className="text-lg font-medium text-slate-800">{task.objective}</p>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-4">
+                                         <div className="bg-slate-50 p-3 rounded">
+                                           <span className="text-xs font-bold text-slate-400 block uppercase">Espacio</span>
+                                           <p className="text-base font-bold">{task.space}</p>
+                                         </div>
+                                         <div className="bg-slate-50 p-3 rounded">
+                                           <span className="text-xs font-bold text-slate-400 block uppercase">Jugadores</span>
+                                           <p className="text-base font-bold">{task.players}</p>
+                                         </div>
+                                      </div>
+                                      <div className="flex-grow">
+                                         <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider mb-2">Reglas y Descripción</span>
+                                         <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{task.rules}</p>
+                                      </div>
+                                   </div>
+                                   
+                                   <div className="w-1/3 flex flex-col gap-4">
+                                      <div className="aspect-video bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden">
+                                         {task.image ? (
+                                           <img src={task.image} className="w-full h-full object-contain" alt="Gráfico Tarea" />
+                                         ) : (
+                                           <div className="text-slate-400 text-center p-4"><ImageIcon className="w-12 h-12 mx-auto mb-2"/><p className="text-xs">Sin Gráfico</p></div>
+                                         )}
+                                      </div>
+
+                                      <div className="border-t border-slate-100 pt-4 space-y-3">
+                                          <div><span className="text-xs font-bold text-green-600 block uppercase">Progresión (+)</span><p className="text-xs text-slate-600">{task.progression || '-'}</p></div>
+                                          <div><span className="text-xs font-bold text-orange-600 block uppercase">Regresión (-)</span><p className="text-xs text-slate-600">{task.regression || '-'}</p></div>
+                                      </div>
+                                      <div className="bg-slate-50 p-3 rounded text-xs border border-slate-100">
+                                          <span className="font-bold text-slate-500 block mb-1">Adaptaciones Carga</span>
+                                          <p className="mb-1"><span className="font-bold text-purple-700">MD-4 (Acel/Desacel):</span> <br/>{task.adaptMD4 || '-'}</p>
+                                          <p><span className="font-bold text-orange-700">MD-3 (Sprints/HSR):</span> <br/>{task.adaptMD3 || '-'}</p>
+                                      </div>
+                                   </div>
+                               </div>
+                            </div>
+                         </div>
+                      );
+                   })}
+                </div>
+              </div>
+            );
+          }
+          return null;
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(TacticalHackathonApp));
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos de edición
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Archivos temporales
+*.tmp
+*.log
+
+# Archivos de proyecto
+node_modules/
+dist/
+build/
+
+# Archivos específicos (si no quieres subirlos)
+# seminario v2
+

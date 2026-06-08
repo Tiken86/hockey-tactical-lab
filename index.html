@@ -12,8 +12,7 @@
         @media print { 
             @page { size: landscape; margin: 0; } 
             body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
-            .no-print { display: none !important; } 
-            .page-break { page-break-before: always; } 
+            .no-print { display: none !important; }
             .print-page-break { page-break-after: always; break-after: page; min-height: 100vh; width: 100vw; padding: 20px; box-sizing: border-box; position: relative; display: block; }
             .print-container { box-shadow: none !important; border: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
         }
@@ -123,13 +122,6 @@
         const AlertTriangle = (props) => (
             <Icon {...props}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </Icon>
-        );
-
-        const Timer = (props) => (
-            <Icon {...props}>
-                <circle cx="12" cy="12" r="10" strokeWidth="2"/>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6l4 2"/>
             </Icon>
         );
 
@@ -296,18 +288,244 @@
             }
         };
 
-        const MICROCYCLE_CONTEXT = {
-          'MD-4': {
-            name: 'MD-4 (Acel / Desacel)',
-            focus: 'Alta carga neuromuscular. Espacios reducidos, arrancadas y frenadas.',
-            rules: { space: 'Reducido (<100m2/jug)', players: 'Pocos (1v1 a 4v4)', duration: 'Corta / Series cortas' }
-          },
-          'MD-3': {
-            name: 'MD-3 (Sprints / HSR)',
-            focus: 'Alta velocidad y resistencia. Espacios amplios para alcanzar >19km/h.',
-            rules: { space: 'Amplio (Similar real)', players: 'Muchos (5v5 a 11v11)', duration: 'Larga / Series largas' }
-          }
-        };
+        function TaskEditor({ editingTaskType, existingTaskData, analysis, onSave, onCancel, StatusBadge }) {
+            const taskDef = TASK_DEFINITIONS[editingTaskType];
+            const imageInputRef = useRef(null);
+
+            // INICIALIZAR CON DATOS O BORRADOR PERSISTENTE
+              const [localData, setLocalData] = useState(() => {
+                if (typeof window !== 'undefined') {
+                    const draftKey = `hockey_lab_draft_${editingTaskType}_v3`;
+                    const savedDraft = localStorage.getItem(draftKey);
+                    if (savedDraft) return JSON.parse(savedDraft);
+                }
+                return existingTaskData || { 
+                    objective: '', players: '', space: '', rules: '', image: null, linkedAnalysisIds: [],
+                    adaptMD4: '', adaptMD3: '', progression: '', regression: '' 
+                };
+              });
+              
+              // Guardado en Borrador Instantáneo (sin imágenes para evitar exceder localStorage)
+              useEffect(() => {
+                try {
+                  // Guardar solo datos de texto, sin imagen en el borrador
+                  const draftData = { ...localData };
+                  delete draftData.image; // No guardar imagen en borrador
+                  localStorage.setItem(`hockey_lab_draft_${editingTaskType}_v3`, JSON.stringify(draftData));
+                } catch (error) {
+                  // Si excede la cuota, limpiar borradores antiguos e intentar de nuevo
+                  if (error.name === 'QuotaExceededError') {
+                    try {
+                      // Limpiar todos los borradores antiguos
+                      Object.keys(TASK_DEFINITIONS).forEach(type => {
+                        localStorage.removeItem(`hockey_lab_draft_${type}_v3`);
+                      });
+                      // Intentar guardar de nuevo sin imagen
+                      const draftData = { ...localData };
+                      delete draftData.image;
+                      localStorage.setItem(`hockey_lab_draft_${editingTaskType}_v3`, JSON.stringify(draftData));
+                    } catch (e) {
+                      console.warn('No se pudo guardar el borrador:', e);
+                    }
+                  }
+                }
+              }, [localData, editingTaskType]);
+
+              // Función para comprimir imágenes
+              const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
+                return new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                      const canvas = document.createElement('canvas');
+                      let width = img.width;
+                      let height = img.height;
+
+                      if (width > maxWidth) {
+                        height = (height * maxWidth) / width;
+                        width = maxWidth;
+                      }
+
+                      canvas.width = width;
+                      canvas.height = height;
+
+                      const ctx = canvas.getContext('2d');
+                      ctx.drawImage(img, 0, 0, width, height);
+
+                      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                      resolve(compressedBase64);
+                    };
+                    img.src = e.target.result;
+                  };
+                  reader.readAsDataURL(file);
+                });
+              };
+
+              const handleImg = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  // Comprimir imagen antes de guardarla
+                  try {
+                    const compressedImage = await compressImage(file);
+                    setLocalData({...localData, image: compressedImage});
+                  } catch (error) {
+                    console.warn('Error comprimiendo imagen, usando original:', error);
+                    // Si falla la compresión, intentar con imagen original
+                    try {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        // Verificar tamaño antes de guardar
+                        const base64 = ev.target.result;
+                        if (base64.length > 1000000) { // ~1MB
+                          alert('⚠️ La imagen es muy grande. Se recomienda usar una imagen más pequeña para evitar problemas de almacenamiento.');
+                        }
+                        setLocalData({...localData, image: base64});
+                      };
+                      reader.readAsDataURL(file);
+                    } catch (err) {
+                      alert('Error al cargar la imagen. Intenta con una imagen más pequeña.');
+                    }
+                  }
+                }
+              };
+
+              const toggleAnalysisLink = (id) => {
+                const current = localData.linkedAnalysisIds || [];
+                if (current.includes(id)) {
+                   setLocalData({...localData, linkedAnalysisIds: current.filter(x => x !== id)});
+                } else {
+                   setLocalData({...localData, linkedAnalysisIds: [...current, id]});
+                }
+              };
+
+              return (
+                <div className="min-h-screen bg-slate-50 p-4 md:p-6 print:hidden">
+                <div className="max-w-6xl mx-auto pb-20">
+                  <StatusBadge />
+                  <div className="flex items-center gap-4 mb-6">
+                    <button onClick={onCancel} className="p-2 hover:bg-slate-200 rounded-full"><ChevronRight className="w-6 h-6 rotate-180" /></button>
+                    <div>
+                       <div className="flex items-center gap-2">
+                           <h2 className="text-xl md:text-2xl font-bold text-slate-800">Diseñando: {taskDef.name}</h2>
+                       </div>
+                       <p className="text-slate-500 text-xs md:text-sm">{taskDef.desc}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Columna Izquierda: REFLEXIÓN */}
+                    <div className="space-y-6">
+                       <div className="bg-blue-50 p-4 md:p-5 rounded-xl shadow-sm border border-blue-200">
+                          <h4 className="text-xs font-bold text-blue-800 uppercase mb-3 flex items-center gap-2">
+                            <Link className="w-4 h-4" /> Conexión Reflexiva
+                          </h4>
+                          <p className="text-xs text-blue-700 mb-4 font-medium">
+                             ¿Qué problema específico resuelve esta tarea?
+                          </p>
+                          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                            {analysis.map((a, i) => {
+                              const isSelected = (localData.linkedAnalysisIds || []).includes(a.id);
+                              return (
+                                <div 
+                                  key={i} 
+                                  onClick={() => toggleAnalysisLink(a.id)}
+                                  className={`cursor-pointer text-xs p-3 rounded-lg border transition-all ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white border-blue-100 text-slate-600 hover:border-blue-300'}`}
+                                >
+                                  <div className="flex justify-between items-start mb-1">
+                                     <span className={`font-bold ${isSelected ? 'text-blue-100' : 'text-slate-800'}`}>{a.situation}</span>
+                                     {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                                  </div>
+                                  <p className={`mb-1 ${isSelected ? 'text-white' : 'text-slate-800 font-medium'}`}>{a.problem}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {(!localData.linkedAnalysisIds || localData.linkedAnalysisIds.length === 0) && (
+                             <div className="mt-3 flex items-center gap-2 text-xs text-red-500 font-bold bg-red-50 p-2 rounded">
+                                <AlertTriangle className="w-4 h-4" /> Selecciona al menos un foco.
+                             </div>
+                          )}
+                       </div>
+                    </div>
+
+                    {/* Columna Derecha: DISEÑO */}
+                    <div className="md:col-span-2 bg-white p-4 md:p-6 rounded-xl shadow-lg border border-slate-200 space-y-5">
+                       <div>
+                         <label className="font-bold text-sm text-slate-700 block mb-1">Objetivo Didáctico</label>
+                         <input className="w-full p-3 bg-slate-50 border rounded-lg outline-none focus:border-blue-500" placeholder="Ej: Mejorar la salida de 4..." value={localData.objective} onChange={e => setLocalData({...localData, objective: e.target.value})} />
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div>
+                           <label className="font-bold text-sm text-slate-700 block mb-1">Espacio</label>
+                           <input className="w-full p-3 bg-slate-50 border rounded-lg outline-none focus:border-blue-500" placeholder="Dimensiones..." value={localData.space} onChange={e => setLocalData({...localData, space: e.target.value})} />
+                         </div>
+                         <div>
+                           <label className="font-bold text-sm text-slate-700 block mb-1">Jugadores</label>
+                           <input className="w-full p-3 bg-slate-50 border rounded-lg outline-none focus:border-blue-500" placeholder="Ej: 4vs4 + 2C" value={localData.players} onChange={e => setLocalData({...localData, players: e.target.value})} />
+                         </div>
+                       </div>
+                       
+                       <div>
+                         <label className="font-bold text-sm text-slate-700 block mb-1">Reglas de Provocación / Descripción</label>
+                         <textarea className="w-full h-32 p-3 bg-slate-50 border rounded-lg outline-none resize-none focus:border-blue-500" placeholder="Desarrollo de la tarea y reglas..." value={localData.rules} onChange={e => setLocalData({...localData, rules: e.target.value})} />
+                       </div>
+
+                       {/* NUEVAS SECCIONES: VARIABILIDAD Y ADAPTABILIDAD */}
+                       <div className="border-t border-slate-100 pt-4">
+                           <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-4"><Sliders className="w-4 h-4"/> Variabilidad y Adaptabilidad</h4>
+                           
+                           {/* PROGRESIÓN / REGRESIÓN */}
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                               <div>
+                                   <label className="text-xs font-bold text-green-600 block mb-1 flex items-center gap-1"><TrendingUp className="w-3 h-3"/> Progresión (+ Difícil)</label>
+                                   <textarea className="w-full h-20 p-3 bg-green-50/50 border border-green-100 rounded-lg text-xs outline-none resize-none focus:border-green-500" placeholder="¿Cómo lo complicamos?" value={localData.progression} onChange={e => setLocalData({...localData, progression: e.target.value})} />
+                               </div>
+                               <div>
+                                   <label className="text-xs font-bold text-orange-600 block mb-1 flex items-center gap-1"><TrendingDown className="w-3 h-3"/> Regresión (Facilitador)</label>
+                                   <textarea className="w-full h-20 p-3 bg-orange-50/50 border border-orange-100 rounded-lg text-xs outline-none resize-none focus:border-orange-500" placeholder="¿Cómo lo facilitamos?" value={localData.regression} onChange={e => setLocalData({...localData, regression: e.target.value})} />
+                               </div>
+                           </div>
+
+                           {/* ADAPTACIÓN A MICROCICLO */}
+                           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                <label className="text-xs font-bold text-slate-500 block mb-2 flex items-center gap-1"><Activity className="w-3 h-3"/> Adaptaciones Condicionales</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div>
+                                         <input className="w-full p-2 bg-white border rounded text-xs" placeholder="Adaptación para MD-4 (Acel/Desacel)..." value={localData.adaptMD4} onChange={e => setLocalData({...localData, adaptMD4: e.target.value})} />
+                                     </div>
+                                     <div>
+                                         <input className="w-full p-2 bg-white border rounded text-xs" placeholder="Adaptación para MD-3 (Sprints)..." value={localData.adaptMD3} onChange={e => setLocalData({...localData, adaptMD3: e.target.value})} />
+                                     </div>
+                                </div>
+                           </div>
+                       </div>
+
+                       <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:bg-slate-50 cursor-pointer" onClick={() => imageInputRef.current.click()}>
+                          <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImg} />
+                          {localData.image ? (
+                            <div className="relative h-32">
+                               <img src={localData.image} className="h-full mx-auto object-contain" alt="Diagrama" />
+                               <button onClick={(e) => { e.stopPropagation(); setLocalData({...localData, image: null}); }} className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-full"><Trash2 className="w-3 h-3"/></button>
+                            </div>
+                          ) : (
+                            <div className="text-slate-400 text-sm flex flex-col items-center gap-1"><ImageIcon className="w-6 h-6" /><span>Click para subir gráfico/foto pizarra</span></div>
+                          )}
+                       </div>
+                       
+                       <button 
+                         onClick={() => onSave(localData)} 
+                         disabled={!localData.objective || !localData.rules || !localData.linkedAnalysisIds || localData.linkedAnalysisIds.length === 0} 
+                         className="w-full bg-slate-900 text-white py-4 rounded-lg font-bold hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2 text-sm md:text-base sticky bottom-4 shadow-xl"
+                       >
+                         <Save className="w-4 h-4" /> Finalizar y Guardar Tarea
+                       </button>
+                    </div>
+                  </div>
+                </div>
+                </div>
+              );
+        }
 
         // --- COMPONENTES ---
 
@@ -339,7 +557,6 @@
           const [saveStatus, setSaveStatus] = useState('saved'); // 'saving', 'saved', 'error'
           
           const fileInputRef = useRef(null);
-          const imageInputRef = useRef(null);
 
           // --- EFECTOS DE GUARDADO INSTANTÁNEO ---
 
@@ -803,259 +1020,22 @@
 
           // 4. EDITOR DE TAREA
           if (step === 4 && editingTaskType) {
-            const taskDef = TASK_DEFINITIONS[editingTaskType];
-            const existingTaskData = data.tasks[editingTaskType];
-            
-            const Editor = () => {
-              // INICIALIZAR CON DATOS O BORRADOR PERSISTENTE
-              const [localData, setLocalData] = useState(() => {
-                if (typeof window !== 'undefined') {
-                    const draftKey = `hockey_lab_draft_${editingTaskType}_v3`;
-                    const savedDraft = localStorage.getItem(draftKey);
-                    if (savedDraft) return JSON.parse(savedDraft);
-                }
-                return existingTaskData || { 
-                    objective: '', players: '', space: '', rules: '', image: null, linkedAnalysisIds: [],
-                    adaptMD4: '', adaptMD3: '', progression: '', regression: '' 
-                };
-              });
-              
-              // Guardado en Borrador Instantáneo (sin imágenes para evitar exceder localStorage)
-              useEffect(() => {
-                try {
-                  // Guardar solo datos de texto, sin imagen en el borrador
-                  const draftData = { ...localData };
-                  delete draftData.image; // No guardar imagen en borrador
-                  localStorage.setItem(`hockey_lab_draft_${editingTaskType}_v3`, JSON.stringify(draftData));
-                } catch (error) {
-                  // Si excede la cuota, limpiar borradores antiguos e intentar de nuevo
-                  if (error.name === 'QuotaExceededError') {
-                    try {
-                      // Limpiar todos los borradores antiguos
-                      Object.keys(TASK_DEFINITIONS).forEach(type => {
-                        localStorage.removeItem(`hockey_lab_draft_${type}_v3`);
-                      });
-                      // Intentar guardar de nuevo sin imagen
-                      const draftData = { ...localData };
-                      delete draftData.image;
-                      localStorage.setItem(`hockey_lab_draft_${editingTaskType}_v3`, JSON.stringify(draftData));
-                    } catch (e) {
-                      console.warn('No se pudo guardar el borrador:', e);
-                    }
-                  }
-                }
-              }, [localData, editingTaskType]);
-
-              // Función para comprimir imágenes
-              const compressImage = (file, maxWidth = 1200, quality = 0.7) => {
-                return new Promise((resolve) => {
-                  const reader = new FileReader();
-                  reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                      const canvas = document.createElement('canvas');
-                      let width = img.width;
-                      let height = img.height;
-
-                      if (width > maxWidth) {
-                        height = (height * maxWidth) / width;
-                        width = maxWidth;
-                      }
-
-                      canvas.width = width;
-                      canvas.height = height;
-
-                      const ctx = canvas.getContext('2d');
-                      ctx.drawImage(img, 0, 0, width, height);
-
-                      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-                      resolve(compressedBase64);
-                    };
-                    img.src = e.target.result;
-                  };
-                  reader.readAsDataURL(file);
-                });
-              };
-
-              const handleImg = async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  // Comprimir imagen antes de guardarla
-                  try {
-                    const compressedImage = await compressImage(file);
-                    setLocalData({...localData, image: compressedImage});
-                  } catch (error) {
-                    console.warn('Error comprimiendo imagen, usando original:', error);
-                    // Si falla la compresión, intentar con imagen original
-                    try {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        // Verificar tamaño antes de guardar
-                        const base64 = ev.target.result;
-                        if (base64.length > 1000000) { // ~1MB
-                          alert('⚠️ La imagen es muy grande. Se recomienda usar una imagen más pequeña para evitar problemas de almacenamiento.');
-                        }
-                        setLocalData({...localData, image: base64});
-                      };
-                      reader.readAsDataURL(file);
-                    } catch (err) {
-                      alert('Error al cargar la imagen. Intenta con una imagen más pequeña.');
-                    }
-                  }
-                }
-              };
-
-              const toggleAnalysisLink = (id) => {
-                const current = localData.linkedAnalysisIds || [];
-                if (current.includes(id)) {
-                   setLocalData({...localData, linkedAnalysisIds: current.filter(x => x !== id)});
-                } else {
-                   setLocalData({...localData, linkedAnalysisIds: [...current, id]});
-                }
-              };
-
-              return (
-                <div className="max-w-6xl mx-auto pb-20">
-                  <StatusBadge />
-                  <div className="flex items-center gap-4 mb-6">
-                    <button onClick={() => { setEditingTaskType(null); setStep(3); }} className="p-2 hover:bg-slate-200 rounded-full"><ChevronRight className="w-6 h-6 rotate-180" /></button>
-                    <div>
-                       <div className="flex items-center gap-2">
-                           <h2 className="text-xl md:text-2xl font-bold text-slate-800">Diseñando: {taskDef.name}</h2>
-                       </div>
-                       <p className="text-slate-500 text-xs md:text-sm">{taskDef.desc}</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Columna Izquierda: REFLEXIÓN */}
-                    <div className="space-y-6">
-                       <div className="bg-blue-50 p-4 md:p-5 rounded-xl shadow-sm border border-blue-200">
-                          <h4 className="text-xs font-bold text-blue-800 uppercase mb-3 flex items-center gap-2">
-                            <Link className="w-4 h-4" /> Conexión Reflexiva
-                          </h4>
-                          <p className="text-xs text-blue-700 mb-4 font-medium">
-                             ¿Qué problema específico resuelve esta tarea?
-                          </p>
-                          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                            {data.analysis.map((a, i) => {
-                              const isSelected = (localData.linkedAnalysisIds || []).includes(a.id);
-                              return (
-                                <div 
-                                  key={i} 
-                                  onClick={() => toggleAnalysisLink(a.id)}
-                                  className={`cursor-pointer text-xs p-3 rounded-lg border transition-all ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white border-blue-100 text-slate-600 hover:border-blue-300'}`}
-                                >
-                                  <div className="flex justify-between items-start mb-1">
-                                     <span className={`font-bold ${isSelected ? 'text-blue-100' : 'text-slate-800'}`}>{a.situation}</span>
-                                     {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
-                                  </div>
-                                  <p className={`mb-1 ${isSelected ? 'text-white' : 'text-slate-800 font-medium'}`}>{a.problem}</p>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {(!localData.linkedAnalysisIds || localData.linkedAnalysisIds.length === 0) && (
-                             <div className="mt-3 flex items-center gap-2 text-xs text-red-500 font-bold bg-red-50 p-2 rounded">
-                                <AlertTriangle className="w-4 h-4" /> Selecciona al menos un foco.
-                             </div>
-                          )}
-                       </div>
-                    </div>
-
-                    {/* Columna Derecha: DISEÑO */}
-                    <div className="md:col-span-2 bg-white p-4 md:p-6 rounded-xl shadow-lg border border-slate-200 space-y-5">
-                       <div>
-                         <label className="font-bold text-sm text-slate-700 block mb-1">Objetivo Didáctico</label>
-                         <input className="w-full p-3 bg-slate-50 border rounded-lg outline-none focus:border-blue-500" placeholder="Ej: Mejorar la salida de 4..." value={localData.objective} onChange={e => setLocalData({...localData, objective: e.target.value})} />
-                       </div>
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <div>
-                           <label className="font-bold text-sm text-slate-700 block mb-1">Espacio</label>
-                           <input className="w-full p-3 bg-slate-50 border rounded-lg outline-none focus:border-blue-500" placeholder="Dimensiones..." value={localData.space} onChange={e => setLocalData({...localData, space: e.target.value})} />
-                         </div>
-                         <div>
-                           <label className="font-bold text-sm text-slate-700 block mb-1">Jugadores</label>
-                           <input className="w-full p-3 bg-slate-50 border rounded-lg outline-none focus:border-blue-500" placeholder="Ej: 4vs4 + 2C" value={localData.players} onChange={e => setLocalData({...localData, players: e.target.value})} />
-                         </div>
-                       </div>
-                       
-                       <div>
-                         <label className="font-bold text-sm text-slate-700 block mb-1">Reglas de Provocación / Descripción</label>
-                         <textarea className="w-full h-32 p-3 bg-slate-50 border rounded-lg outline-none resize-none focus:border-blue-500" placeholder="Desarrollo de la tarea y reglas..." value={localData.rules} onChange={e => setLocalData({...localData, rules: e.target.value})} />
-                       </div>
-
-                       {/* NUEVAS SECCIONES: VARIABILIDAD Y ADAPTABILIDAD */}
-                       <div className="border-t border-slate-100 pt-4">
-                           <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-4"><Sliders className="w-4 h-4"/> Variabilidad y Adaptabilidad</h4>
-                           
-                           {/* PROGRESIÓN / REGRESIÓN */}
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                               <div>
-                                   <label className="text-xs font-bold text-green-600 block mb-1 flex items-center gap-1"><TrendingUp className="w-3 h-3"/> Progresión (+ Difícil)</label>
-                                   <textarea className="w-full h-20 p-3 bg-green-50/50 border border-green-100 rounded-lg text-xs outline-none resize-none focus:border-green-500" placeholder="¿Cómo lo complicamos?" value={localData.progression} onChange={e => setLocalData({...localData, progression: e.target.value})} />
-                               </div>
-                               <div>
-                                   <label className="text-xs font-bold text-orange-600 block mb-1 flex items-center gap-1"><TrendingDown className="w-3 h-3"/> Regresión (Facilitador)</label>
-                                   <textarea className="w-full h-20 p-3 bg-orange-50/50 border border-orange-100 rounded-lg text-xs outline-none resize-none focus:border-orange-500" placeholder="¿Cómo lo facilitamos?" value={localData.regression} onChange={e => setLocalData({...localData, regression: e.target.value})} />
-                               </div>
-                           </div>
-
-                           {/* ADAPTACIÓN A MICROCICLO */}
-                           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                <label className="text-xs font-bold text-slate-500 block mb-2 flex items-center gap-1"><Activity className="w-3 h-3"/> Adaptaciones Condicionales</label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <div>
-                                         <input className="w-full p-2 bg-white border rounded text-xs" placeholder="Adaptación para MD-4 (Acel/Desacel)..." value={localData.adaptMD4} onChange={e => setLocalData({...localData, adaptMD4: e.target.value})} />
-                                     </div>
-                                     <div>
-                                         <input className="w-full p-2 bg-white border rounded text-xs" placeholder="Adaptación para MD-3 (Sprints)..." value={localData.adaptMD3} onChange={e => setLocalData({...localData, adaptMD3: e.target.value})} />
-                                     </div>
-                                </div>
-                           </div>
-                       </div>
-
-                       <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:bg-slate-50 cursor-pointer" onClick={() => imageInputRef.current.click()}>
-                          <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImg} />
-                          {localData.image ? (
-                            <div className="relative h-32">
-                               <img src={localData.image} className="h-full mx-auto object-contain" alt="Diagrama" />
-                               <button onClick={(e) => { e.stopPropagation(); setLocalData({...localData, image: null}); }} className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-full"><Trash2 className="w-3 h-3"/></button>
-                            </div>
-                          ) : (
-                            <div className="text-slate-400 text-sm flex flex-col items-center gap-1"><ImageIcon className="w-6 h-6" /><span>Click para subir gráfico/foto pizarra</span></div>
-                          )}
-                       </div>
-                       
-                       <button 
-                         onClick={() => saveTask(localData)} 
-                         disabled={!localData.objective || !localData.rules || !localData.linkedAnalysisIds || localData.linkedAnalysisIds.length === 0} 
-                         className="w-full bg-slate-900 text-white py-4 rounded-lg font-bold hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2 text-sm md:text-base sticky bottom-4 shadow-xl"
-                       >
-                         <Save className="w-4 h-4" /> Finalizar y Guardar Tarea
-                       </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            };
-            return <div className="min-h-screen bg-slate-50 p-4 md:p-6 print:hidden"><Editor /></div>;
+            return (
+              <TaskEditor
+                editingTaskType={editingTaskType}
+                existingTaskData={data.tasks[editingTaskType]}
+                analysis={data.analysis}
+                onSave={saveTask}
+                onCancel={() => { setEditingTaskType(null); setStep(3); }}
+                StatusBadge={StatusBadge}
+              />
+            );
           }
 
           // 5. RESUMEN FINAL E IMPRESIÓN
           if (step === 5) {
             return (
               <div className="min-h-screen bg-slate-100 p-4 md:p-8 print:p-0 print:bg-white">
-                <style>{`
-                  @media print { 
-                    @page { size: landscape; margin: 0; } 
-                    body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
-                    .no-print { display: none !important; } 
-                    .print-page-break { page-break-after: always; break-after: page; min-height: 100vh; width: 100vw; padding: 20px; box-sizing: border-box; position: relative; display: block; }
-                    .print-container { box-shadow: none !important; border: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
-                  }
-                `}</style>
-
                 <div className="max-w-6xl mx-auto">
                    <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 no-print">
                       <h2 className="text-2xl font-bold text-slate-800">Informe Técnico Final</h2>

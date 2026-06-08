@@ -102,6 +102,7 @@ begin
                 jsonb_build_object(
                     'groupName', btrim(p_nombre),
                     'momentId', '',
+                    'members', '[]'::jsonb,
                     'customBehaviors', '[]'::jsonb,
                     'analysis', '[]'::jsonb,
                     'tasks', jsonb_build_object(

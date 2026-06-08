@@ -287,8 +287,9 @@
         const INITIAL_DATA = {
             groupName: '',
             momentId: '',
-            customBehaviors: [], 
-            analysis: [], 
+            members: [],
+            customBehaviors: [],
+            analysis: [],
             tasks: {
               DIRIGIDA: null,
               ESTRUCTURADA: null,
@@ -655,6 +656,8 @@
           const [editingAnalysisId, setEditingAnalysisId] = useState(null);
           const [newBehavior, setNewBehavior] = useState('');
           const [isAddingBehavior, setIsAddingBehavior] = useState(false);
+          const [memberNombre, setMemberNombre] = useState('');
+          const [memberApellidos, setMemberApellidos] = useState('');
           const [saveStatus, setSaveStatus] = useState('saved'); // 'saving', 'saved', 'error'
 
           // Refs para realtime (evitan closures obsoletos en los listeners del canal)
@@ -716,7 +719,17 @@
               .on('presence', { event: 'sync' }, () => setMembers(Object.keys(ch.presenceState()).length || 1))
               .subscribe((status) => {
                 setConnected(status === 'SUBSCRIBED');
-                if (status === 'SUBSCRIBED') ch.track({ at: Date.now() });
+                if (status === 'SUBSCRIBED') {
+                  ch.track({ at: Date.now() });
+                  // Re-sincronizar al conectar: recoge cambios ocurridos entre la carga y la suscripción
+                  sb.rpc('cargar_grupo', { p_codigo: cod }).then(({ data: rows }) => {
+                    if (rows && rows[0]) {
+                      applyingRemoteRef.current = true;
+                      setData(rows[0].data && Object.keys(rows[0].data).length ? rows[0].data : INITIAL_DATA);
+                      setEntregado(!!rows[0].entregado);
+                    }
+                  }).catch(() => {});
+                }
               });
             channelRef.current = ch;
           };
@@ -815,7 +828,7 @@
 
           // --- HELPERS ---
 
-          const SCALAR_FIELDS = ['groupName', 'momentId', 'customBehaviors'];
+          const SCALAR_FIELDS = ['groupName', 'momentId', 'customBehaviors', 'members'];
           const updateData = (field, value) => {
             if (readOnly) return;
             setData(prev => ({ ...prev, [field]: value }));
@@ -835,6 +848,21 @@
               setNewBehavior('');
               setIsAddingBehavior(false);
             }
+          };
+
+          const addMember = () => {
+            if (readOnly) return;
+            const nombre = memberNombre.trim();
+            const apellidos = memberApellidos.trim();
+            if (!nombre) return;
+            updateData('members', [...(data.members || []), { id: Date.now(), nombre, apellidos }]);
+            setMemberNombre('');
+            setMemberApellidos('');
+          };
+
+          const removeMember = (id) => {
+            if (readOnly) return;
+            updateData('members', (data.members || []).filter(m => m.id !== id));
           };
 
           const addAnalysisItem = () => {
@@ -1160,6 +1188,35 @@
                      </div>
                   </div>
 
+                  <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm mb-6">
+                    <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wide mb-3">Integrantes del grupo</h3>
+                    {!readOnly && (
+                      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                        <input type="text" placeholder="Nombre"
+                          className="flex-1 p-2.5 bg-slate-50 border rounded-lg text-sm outline-none focus:border-blue-500"
+                          value={memberNombre} onChange={(e) => setMemberNombre(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && addMember()} />
+                        <input type="text" placeholder="Apellidos"
+                          className="flex-1 p-2.5 bg-slate-50 border rounded-lg text-sm outline-none focus:border-blue-500"
+                          value={memberApellidos} onChange={(e) => setMemberApellidos(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && addMember()} />
+                        <button onClick={addMember} disabled={!memberNombre.trim()}
+                          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white px-4 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-1">
+                          <Plus className="w-4 h-4" /> Añadir
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {(data.members || []).length === 0 && <p className="text-slate-400 text-sm">Aún no hay integrantes. Añadid el nombre y apellidos de cada miembro.</p>}
+                      {(data.members || []).map((m) => (
+                        <span key={m.id} className="bg-slate-100 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-full flex items-center gap-2">
+                          {m.nombre} {m.apellidos}
+                          {!readOnly && <button onClick={() => removeMember(m.id)} className="text-slate-400 hover:text-red-500" title="Quitar">✕</button>}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
                     {Object.keys(TASK_DEFINITIONS).map((type) => {
                       const isDone = !!data.tasks[type];
@@ -1245,6 +1302,12 @@
                          <div>
                             <h1 className="text-4xl font-black text-slate-900 mb-2">{data.groupName}</h1>
                             <p className="text-xl text-slate-500">Propuesta de Intervención Táctica</p>
+                            {(data.members || []).length > 0 && (
+                              <p className="text-sm text-slate-600 mt-3 max-w-xl">
+                                <span className="font-bold uppercase text-xs text-slate-400">Integrantes: </span>
+                                {(data.members || []).map(m => `${m.nombre} ${m.apellidos}`.trim()).join(' · ')}
+                              </p>
+                            )}
                          </div>
                          <div className="text-right">
                             <span className={`px-4 py-2 rounded-lg ${selectedMoment.color} text-white font-bold`}>{selectedMoment.id}</span>

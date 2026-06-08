@@ -55,6 +55,9 @@
                   <div>
                     <h2 className="text-xl font-black text-slate-800">{grupo.nombre_grupo}</h2>
                     <p className="text-xs text-slate-500">Código {grupo.codigo} · {MOMENTOS[d.momentId] || 'Sin momento'} · {grupo.entregado ? 'ENTREGADO ' + fmtFecha(grupo.entregado_at) : 'Borrador'}</p>
+                    {(d.members || []).length > 0 && (
+                      <p className="text-xs text-slate-600 mt-1"><b>Integrantes:</b> {(d.members || []).map(m => `${m.nombre} ${m.apellidos}`.trim()).join(' · ')}</p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button onClick={descargarJSON} className="bg-green-600 text-white px-3 py-2 rounded-lg font-bold text-sm">Descargar JSON</button>

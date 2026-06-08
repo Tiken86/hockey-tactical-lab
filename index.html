@@ -399,43 +399,11 @@
             const imageInputRef = useRef(null);
 
             // INICIALIZAR CON DATOS O BORRADOR PERSISTENTE
-              const [localData, setLocalData] = useState(() => {
-                if (typeof window !== 'undefined') {
-                    const draftKey = `hockey_lab_draft_${editingTaskType}_v3`;
-                    const savedDraft = localStorage.getItem(draftKey);
-                    if (savedDraft) return JSON.parse(savedDraft);
-                }
-                return existingTaskData || { 
-                    objective: '', players: '', space: '', rules: '', image: null, linkedAnalysisIds: [],
-                    adaptMD4: '', adaptMD3: '', progression: '', regression: '' 
-                };
+              // La fuente de verdad es la tarea guardada en el grupo (nube). Sin borrador local.
+              const [localData, setLocalData] = useState(() => existingTaskData || {
+                objective: '', players: '', space: '', rules: '', image: null, linkedAnalysisIds: [],
+                adaptMD4: '', adaptMD3: '', progression: '', regression: ''
               });
-              
-              // Guardado en Borrador Instantáneo (sin imágenes para evitar exceder localStorage)
-              useEffect(() => {
-                try {
-                  // Guardar solo datos de texto, sin imagen en el borrador
-                  const draftData = { ...localData };
-                  delete draftData.image; // No guardar imagen en borrador
-                  localStorage.setItem(`hockey_lab_draft_${editingTaskType}_v3`, JSON.stringify(draftData));
-                } catch (error) {
-                  // Si excede la cuota, limpiar borradores antiguos e intentar de nuevo
-                  if (error.name === 'QuotaExceededError') {
-                    try {
-                      // Limpiar todos los borradores antiguos
-                      Object.keys(TASK_DEFINITIONS).forEach(type => {
-                        localStorage.removeItem(`hockey_lab_draft_${type}_v3`);
-                      });
-                      // Intentar guardar de nuevo sin imagen
-                      const draftData = { ...localData };
-                      delete draftData.image;
-                      localStorage.setItem(`hockey_lab_draft_${editingTaskType}_v3`, JSON.stringify(draftData));
-                    } catch (e) {
-                      console.warn('No se pudo guardar el borrador:', e);
-                    }
-                  }
-                }
-              }, [localData, editingTaskType]);
 
               // Función para comprimir imágenes
               const compressImage = (file, maxWidth = 1000, quality = 0.6) => {
@@ -809,6 +777,11 @@
 
           // Arranque: reabrir sesión guardada + listeners de conexión
           useEffect(() => {
+            // Limpiar restos del modelo antiguo (borradores/estado en localStorage)
+            try {
+              ['hockey_lab_data_v3', 'hockey_lab_step_v3', 'hockey_lab_editing_type_v3'].forEach(k => localStorage.removeItem(k));
+              Object.keys(localStorage).filter(k => k.indexOf('hockey_lab_draft_') === 0).forEach(k => localStorage.removeItem(k));
+            } catch (e) {}
             const saved = (() => { try { return localStorage.getItem('hockey_lab_codigo_v4'); } catch (e) { return null; } })();
             if (saved) {
               abrirGrupo(saved).then(ok => { if (!ok) { try { localStorage.removeItem('hockey_lab_codigo_v4'); } catch (e) {} } setBooting(false); });

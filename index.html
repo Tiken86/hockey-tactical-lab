@@ -227,6 +227,7 @@
             color: 'bg-blue-600',
             borderColor: 'border-blue-600',
             textColor: 'text-blue-600',
+            video: 'https://www.youtube.com/watch?v=QzD5K5RMyB4',
             behaviors: ['Amplitud', 'Pase y apoyo', 'Cuidar bola', 'Fijar y pasar', 'Búsqueda línea pase', 'Estructura (Ocupación)']
           },
           {
@@ -237,6 +238,7 @@
             color: 'bg-green-600',
             borderColor: 'border-green-600',
             textColor: 'text-green-600',
+            video: 'https://www.youtube.com/watch?v=zG12x6CQx2c',
             behaviors: ['Verticalidad', 'Pase y voy', 'Descarga', 'Cambio pasillo', 'Ocupación área', 'Definición']
           },
           {
@@ -247,6 +249,7 @@
             color: 'bg-red-600',
             borderColor: 'border-red-600',
             textColor: 'text-red-600',
+            video: 'https://www.youtube.com/watch?v=oxu2G3ux67k',
             behaviors: ['Actitud defensiva', 'Cerrar líneas', 'Juntar líneas', 'Aproximar-Canalizar', 'Seguir marca', 'Ayuda defensiva']
           },
           {
@@ -257,6 +260,7 @@
             color: 'bg-orange-600',
             borderColor: 'border-orange-600',
             textColor: 'text-orange-600',
+            video: 'https://www.youtube.com/watch?v=bzpEpFuCd6Q',
             behaviors: ['Presión 3seg', 'Repliegue', 'Cortar contra', 'Priorizar centro', 'Ralentizar (duelo)', 'Mantener fuera']
           }
         ];
@@ -1010,7 +1014,7 @@
                      onChange={e => updateData('videoUrl', e.target.value)}
                    />
                    {(() => {
-                      const v = parseVideo(data.videoUrl);
+                      const v = parseVideo(data.videoUrl || selectedMoment.video);
                       if (!v) return <p className="text-slate-400 text-sm">Aún no hay vídeo. Pegad el enlace que os tocó analizar.</p>;
                       if (v.embed) return (
                         <div className="aspect-video w-full rounded-lg overflow-hidden border border-slate-200">
@@ -1334,7 +1338,7 @@
                       </div>
                       
                       {(() => {
-                         const v = parseVideo(data.videoUrl);
+                         const v = parseVideo(data.videoUrl || selectedMoment.video);
                          if (!v) return null;
                          return (
                            <div className="mb-8">

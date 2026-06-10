@@ -176,6 +176,13 @@
             </Icon>
         );
 
+        const Video = (props) => (
+            <Icon {...props}>
+                <polygon points="23 7 16 12 23 17 23 7" strokeWidth="2"/>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" strokeWidth="2"/>
+            </Icon>
+        );
+
         const Printer = (props) => (
             <Icon {...props}>
                 <polyline points="6 9 6 2 18 2 18 9" strokeWidth="2"/>
@@ -284,9 +291,21 @@
           COMPETITIVA: { name: 'Tarea Competitiva', desc: 'Simulación real (Partido modificado, 11vs11).' }
         };
 
+        // Parsea URL de YouTube/Vimeo a {embed, thumb, url}. null si vacío.
+        function parseVideo(url) {
+            if (!url || !url.trim()) return null;
+            const u = url.trim();
+            let m = u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+            if (m) return { embed: `https://www.youtube.com/embed/${m[1]}`, thumb: `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`, url: u };
+            m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+            if (m) return { embed: `https://player.vimeo.com/video/${m[1]}`, thumb: null, url: u };
+            return { embed: null, thumb: null, url: u };
+        }
+
         const INITIAL_DATA = {
             groupName: '',
             momentId: '',
+            videoUrl: '',
             members: [],
             customBehaviors: [],
             analysis: [],
@@ -801,7 +820,7 @@
 
           // --- HELPERS ---
 
-          const SCALAR_FIELDS = ['groupName', 'momentId', 'customBehaviors', 'members'];
+          const SCALAR_FIELDS = ['groupName', 'momentId', 'videoUrl', 'customBehaviors', 'members'];
           const updateData = (field, value) => {
             if (readOnly) return;
             setData(prev => ({ ...prev, [field]: value }));
@@ -975,6 +994,31 @@
                 <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
                     <span className={`px-3 py-1 rounded text-xs font-bold text-white w-fit ${selectedMoment.color}`}>{selectedMoment.id}</span>
                     <h2 className="text-xl md:text-2xl font-bold text-slate-800">Fase 2: Anatomía del Problema</h2>
+                </div>
+
+                {/* VÍDEO A ANALIZAR */}
+                <div className="bg-white p-4 md:p-6 rounded-xl shadow-lg border border-slate-200 mb-8">
+                   <div className="flex items-center gap-2 mb-4">
+                      <Video className="w-5 h-5 text-blue-600" />
+                      <h3 className="text-base md:text-lg font-bold text-slate-800">Vídeo a analizar</h3>
+                   </div>
+                   <input
+                     className="w-full p-2 border rounded text-sm mb-4"
+                     placeholder="Pega aquí el enlace de YouTube o Vimeo..."
+                     value={data.videoUrl || ''}
+                     onChange={e => updateData('videoUrl', e.target.value)}
+                   />
+                   {(() => {
+                      const v = parseVideo(data.videoUrl);
+                      if (!v) return <p className="text-slate-400 text-sm">Aún no hay vídeo. Pegad el enlace que os tocó analizar.</p>;
+                      if (v.embed) return (
+                        <div className="aspect-video w-full rounded-lg overflow-hidden border border-slate-200">
+                          <iframe src={v.embed} className="w-full h-full" allowFullScreen frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                        </div>
+                      );
+                      return <a href={v.url} target="_blank" rel="noopener" className="text-blue-600 underline text-sm break-all">{v.url}</a>;
+                   })()}
                 </div>
 
                 <div className={`bg-white p-4 md:p-6 rounded-xl shadow-lg border transition-all mb-8 ${editingAnalysisId ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-200'}`}>
@@ -1288,6 +1332,20 @@
                          </div>
                       </div>
                       
+                      {(() => {
+                         const v = parseVideo(data.videoUrl);
+                         if (!v) return null;
+                         return (
+                           <div className="mb-8">
+                             <h3 className="font-bold text-slate-700 uppercase tracking-wider text-sm mb-4 border-b pb-2">Vídeo analizado</h3>
+                             <a href={v.url} target="_blank" rel="noopener" className="flex items-center gap-4 group">
+                                {v.thumb && <img src={v.thumb} alt="Miniatura del vídeo" className="w-48 rounded-lg border border-slate-200 flex-shrink-0" />}
+                                <span className="text-blue-600 underline text-sm break-all">{v.url}</span>
+                             </a>
+                           </div>
+                         );
+                      })()}
+
                       <div className="mb-8">
                         <h3 className="font-bold text-slate-700 uppercase tracking-wider text-sm mb-4 border-b pb-2">1. Análisis Táctico</h3>
                         <table className="w-full text-sm text-left">

@@ -736,7 +736,8 @@
               setCodigo(c);
               try { localStorage.setItem('hockey_lab_codigo_v4', c); } catch (e) {}
               conectarCanal(c);
-              setStep(row.entregado ? 5 : 3);
+              const d = row.data && Object.keys(row.data).length ? row.data : INITIAL_DATA;
+              setStep(row.entregado ? 5 : (d.momentId ? 2 : 1));
               return true;
             } catch (e) { alert('Error de conexión.'); return false; }
           };

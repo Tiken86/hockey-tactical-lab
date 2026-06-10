@@ -1,0 +1,25 @@
+name: Supabase keep-alive
+
+# Evita que Supabase pause el proyecto free por inactividad (pausa a los ~7 dias).
+# Hace un ping a la REST API 2 veces al dia. Tambien se puede lanzar a mano.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'    # cada dia a las 06:00 UTC
+    - cron: '0 18 * * *'   # cada dia a las 18:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        run: |
+          curl -sf \
+            -H "apikey: ${SUPABASE_ANON}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON}" \
+            "${SUPABASE_URL}/rest/v1/seminario_config?select=id&limit=1" \
+            && echo "Ping OK"
+        env:
+          SUPABASE_URL: https://hucsouzfffhqlrogyxwn.supabase.co
+          SUPABASE_ANON: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1Y3NvdXpmZmZocWxyb2d5eHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDYwNDksImV4cCI6MjA5NjUyMjA0OX0.UPGfdAk8gBclAwhBv4wiXUw5kBRVfhqx7l4emAMrgbQ

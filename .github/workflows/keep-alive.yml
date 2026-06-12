@@ -14,11 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase REST
+        # anon no tiene SELECT en tablas (deny-all); el unico acceso es via RPC
         run: |
           curl -sf \
+            -X POST \
             -H "apikey: ${SUPABASE_ANON}" \
             -H "Authorization: Bearer ${SUPABASE_ANON}" \
-            "${SUPABASE_URL}/rest/v1/seminario_config?select=id&limit=1" \
+            -H "Content-Type: application/json" \
+            -d '{"p_codigo":"PING"}' \
+            "${SUPABASE_URL}/rest/v1/rpc/cargar_grupo" \
             && echo "Ping OK"
         env:
           SUPABASE_URL: https://hucsouzfffhqlrogyxwn.supabase.co
